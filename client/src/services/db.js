@@ -1,196 +1,213 @@
-// services/db.js - LocalStorage based Mock Database
+import { createClient } from '@supabase/supabase-js';
 
-const defaultData = {
-  users: [
-    { id: 1, email: 'admin@mmm.com', password: 'admin', role: 'admin', name: 'Admin', createdAt: '2024-01-01' },
-    { id: 2, email: 'user@mmm.com', password: 'user', role: 'member', name: 'Member A', createdAt: '2024-01-02' },
-    { id: 3, email: 'partner@mmm.com', password: 'partner', role: 'partner', name: 'Partner One', createdAt: '2024-01-03' }
-  ],
-  movies: [
-    { id: 1, title: 'พี่มาก..พระโขนง', poster: 'https://picsum.photos/500/750?movie=1', description: 'ภาพยนตร์สยองขวัญสุดฮิต...', releaseYear: 2013, genre: 'Horror', createdAt: '2024-01-01' },
-    { id: 2, title: 'ฉลาดเกมส์โกง', poster: 'https://picsum.photos/500/750?movie=2', description: 'เรื่องราวของนักเรียนหญิงฉลาด...', releaseYear: 2017, genre: 'Thriller', createdAt: '2024-01-02' }
-  ],
-  locations: [
-    { id: 1, name: 'วัดมหาบุศย์ พระโขนง', lat: 13.7063, lng: 100.6018, province: 'Bangkok', description: 'วัดเก่าแก่ริมคลอง... ถ่ายทำพี่มาก', type: 'Temple', createdAt: '2024-01-01', hidden: false }
-  ],
-  scenes: [
-    { id: 1, movieId: 1, locationId: 1, description: 'ฉากที่มากและเพื่อนมาเยี่ยมนาค', imgUrl: 'https://picsum.photos/400/250?1' }
-  ],
-  reviews: [
-    { id: 1, userId: 2, locationId: 1, rating: 5, comment: 'สวยงาม บรรยากาศสมจริง', createdAt: '2024-02-01' }
-  ],
-  rewards: [
-    { id: 1, title: 'ตั๋วหนังฟรี 1 ที่นั่ง', points: 500, stock: 10, img: 'https://picsum.photos/300/200?ticket', hidden: false }
-  ],
-  ads: [
-    { id: 1, partnerId: 3, title: 'โปรพักโรงแรมใกล้ที่ถ่ายทำ', description: 'ส่วนลด 20% สำหรับแฟนคลับ', lat: 13.7063, lng: 100.6018, hidden: false, createdAt: '2024-02-10' }
-  ],
-  points: { 2: 600, 3: 100 },
-  redemptions: [],
-  _mid: 3, _lid: 2, _rid: 2, _adid: 2, _uid: 4
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// In-memory cache for synchronous reads matching legacy behavior
+let memoryDB = {
+  users: [],
+  movies: [],
+  locations: [],
+  scenes: [],
+  reviews: [],
+  rewards: [],
+  ads: [],
+  points: {}
 };
 
-const DB_KEY = 'movemovie_v3_db';
+export const initDB = async () => {
+  try {
+    const [uRes, mRes, lRes, sRes, rvRes, rwRes, aRes, pRes] = await Promise.all([
+      supabase.from('users').select('*'),
+      supabase.from('movies').select('*'),
+      supabase.from('locations').select('*'),
+      supabase.from('scenes').select('*'),
+      supabase.from('reviews').select('*'),
+      supabase.from('rewards').select('*'),
+      supabase.from('ads').select('*'),
+      supabase.from('points').select('*')
+    ]);
 
-const getDB = () => {
-  const d = localStorage.getItem(DB_KEY);
-  return d ? JSON.parse(d) : defaultData;
-};
+    if (!uRes.error) memoryDB.users = uRes.data || [];
+    if (!mRes.error) memoryDB.movies = mRes.data || [];
+    if (!lRes.error) memoryDB.locations = lRes.data || [];
+    if (!sRes.error) memoryDB.scenes = sRes.data || [];
+    if (!rvRes.error) memoryDB.reviews = rvRes.data || [];
+    if (!rwRes.error) memoryDB.rewards = rwRes.data || [];
+    if (!aRes.error) memoryDB.ads = aRes.data || [];
+    
+    // Process points into key-value map
+    if (!pRes.error) {
+      const pmap = {};
+      (pRes.data || []).forEach(p => pmap[p.userId] = p.amount);
+      memoryDB.points = pmap;
+    }
 
-const saveDB = (db) => {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
+    console.log('✅ Supabase initialized & cached', memoryDB);
+  } catch (error) {
+    console.error('❌ Failed to initialize Supabase:', error);
+  }
 };
 
 export const AuthController = {
-  login(email, pass) {
-    const db = getDB();
-    return db.users.find(u => u.email === email && u.password === pass) || null;
+  async login(email, pass) {
+    // In a real app we'd use Supabase Auth. For compatibility we look up the table.
+    const u = memoryDB.users.find(u => u.email === email && u.password === pass);
+    return u || null;
   },
-  register(email, pass, name) {
-    const db = getDB();
-    if (db.users.find(u => u.email === email)) throw new Error('Email already exists');
-    const u = { id: db._uid++, email, password: pass, name, role: 'member', createdAt: new Date().toISOString() };
-    db.users.push(u);
-    db.points[u.id] = 100; // Welcome points
-    saveDB(db);
-    return u;
-  }
-};
-
-export const MovieController = {
-  list() { return getDB().movies; },
-  get(id) { return getDB().movies.find(m => m.id === parseInt(id)); },
-  scenes(movieId) { return getDB().scenes.filter(s => s.movieId === parseInt(movieId)); },
-  add(data) {
-    const db = getDB();
-    const m = { id: db._mid++, ...data, createdAt: new Date().toISOString() };
-    db.movies.push(m);
-    saveDB(db);
-    return m;
-  },
-  update(id, data) {
-    const db = getDB();
-    const idx = db.movies.findIndex(m => m.id === parseInt(id));
-    if (idx !== -1) { db.movies[idx] = { ...db.movies[idx], ...data }; saveDB(db); }
-  },
-  delete(id) {
-    const db = getDB();
-    db.movies = db.movies.filter(m => m.id !== parseInt(id));
-    db.scenes = db.scenes.filter(s => s.movieId !== parseInt(id));
-    saveDB(db);
-  }
-};
-
-export const LocationController = {
-  list() { return getDB().locations; },
-  get(id) { return getDB().locations.find(l => l.id === parseInt(id)); },
-  add(data) {
-    const db = getDB();
-    const l = { id: db._lid++, ...data, hidden: false, createdAt: new Date().toISOString() };
-    db.locations.push(l);
-    saveDB(db);
-    return l;
-  },
-  update(id, data) {
-    const db = getDB();
-    const idx = db.locations.findIndex(l => l.id === parseInt(id));
-    if (idx !== -1) { db.locations[idx] = { ...db.locations[idx], ...data }; saveDB(db); }
-  },
-  delete(id) {
-    const db = getDB();
-    db.locations = db.locations.filter(l => l.id !== parseInt(id));
-    db.scenes = db.scenes.filter(s => s.locationId !== parseInt(id));
-    saveDB(db);
-  },
-  toggleVisibility(id) {
-    const db = getDB();
-    const l = db.locations.find(x => x.id === parseInt(id));
-    if (l) { l.hidden = !l.hidden; saveDB(db); }
-  }
-};
-
-export const AdController = {
-  list() { return getDB().ads; },
-  add(data) {
-    const db = getDB();
-    const a = { id: db._adid++, ...data, hidden: false, createdAt: new Date().toISOString() };
-    db.ads.push(a);
-    saveDB(db);
-    return a;
-  },
-  update(id, data) {
-    const db = getDB();
-    const idx = db.ads.findIndex(a => a.id === parseInt(id));
-    if (idx !== -1) { db.ads[idx] = { ...db.ads[idx], ...data }; saveDB(db); }
-  },
-  delete(id) {
-    const db = getDB();
-    db.ads = db.ads.filter(a => a.id !== parseInt(id));
-    saveDB(db);
-  },
-  toggleVisibility(id) {
-    const db = getDB();
-    const a = db.ads.find(x => x.id === parseInt(id));
-    if (a) { a.hidden = !a.hidden; saveDB(db); }
-  }
-};
-
-export const RewardController = {
-  list() { return getDB().rewards; },
-  add(data) {
-    const db = getDB();
-    const r = { id: db._rid++, ...data, hidden: false };
-    db.rewards.push(r);
-    saveDB(db);
-  },
-  update(id, data) {
-    const db = getDB();
-    const idx = db.rewards.findIndex(r => r.id === parseInt(id));
-    if (idx !== -1) { db.rewards[idx] = { ...db.rewards[idx], ...data }; saveDB(db); }
-  },
-  delete(id) {
-    const db = getDB();
-    db.rewards = db.rewards.filter(r => r.id !== parseInt(id));
-    saveDB(db);
-  },
-  toggleVisibility(id) {
-    const db = getDB();
-    const r = db.rewards.find(x => x.id === parseInt(id));
-    if (r) { r.hidden = !r.hidden; saveDB(db); }
+  async register(email, pass, name) {
+    if (memoryDB.users.find(u => u.email === email)) throw new Error('Email already exists');
+    const nw = { email, password: pass, name, role: 'member', createdAt: new Date().toISOString() };
+    const { data, error } = await supabase.from('users').insert(nw).select().single();
+    if (error) throw new Error(error.message);
+    memoryDB.users.push(data);
+    
+    // Welcome points
+    const { data: pData } = await supabase.from('points').insert({ userId: data.id, amount: 100 }).select().single();
+    memoryDB.points[data.id] = (pData?.amount || 100);
+    return data;
   }
 };
 
 export const PointController = {
-  get(userId) { return getDB().points[userId] || 0; },
-  add(userId, amount) {
-    const db = getDB();
-    db.points[userId] = (db.points[userId] || 0) + amount;
-    saveDB(db);
+  get(userId) { return memoryDB.points[userId] || 0; },
+  async spend(userId, amount) {
+    const current = memoryDB.points[userId] || 0;
+    if (current < amount) throw new Error('Not enough points');
+    const nw = current - amount;
+    
+    const { error } = await supabase.from('points').update({ amount: nw }).eq('userId', userId);
+    if (error) throw new Error(error.message);
+    
+    memoryDB.points[userId] = nw;
+  }
+};
+
+export const MovieController = {
+  list() { return memoryDB.movies; },
+  get(id) { return memoryDB.movies.find(m => m.id === parseInt(id)); },
+  scenes(movieId) { return memoryDB.scenes.filter(s => s.movieId === parseInt(movieId)); },
+  async add(data) {
+    const dDate = { ...data, createdAt: new Date().toISOString() };
+    const { data: res, error } = await supabase.from('movies').insert(dDate).select().single();
+    if (error) throw error;
+    memoryDB.movies.push(res);
+    return res;
   },
-  spend(userId, amount) {
-    const db = getDB();
-    if ((db.points[userId] || 0) < amount) throw new Error('Not enough points');
-    db.points[userId] -= amount;
-    saveDB(db);
+  async update(id, data) {
+    const { data: res, error } = await supabase.from('movies').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    const idx = memoryDB.movies.findIndex(m => m.id === parseInt(id));
+    if (idx !== -1) memoryDB.movies[idx] = res;
+    return res;
+  },
+  async delete(id) {
+    await supabase.from('movies').delete().eq('id', id);
+    memoryDB.movies = memoryDB.movies.filter(m => m.id !== parseInt(id));
+  }
+};
+
+export const LocationController = {
+  list() { return memoryDB.locations; },
+  get(id) { return memoryDB.locations.find(l => l.id === parseInt(id)); },
+  async add(data) {
+    const dDate = { ...data, hidden: false, createdAt: new Date().toISOString() };
+    const { data: res, error } = await supabase.from('locations').insert(dDate).select().single();
+    if (error) throw error;
+    memoryDB.locations.push(res);
+    return res;
+  },
+  async update(id, data) {
+    const { data: res, error } = await supabase.from('locations').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    const idx = memoryDB.locations.findIndex(l => l.id === parseInt(id));
+    if (idx !== -1) memoryDB.locations[idx] = res;
+  },
+  async delete(id) {
+    await supabase.from('locations').delete().eq('id', id);
+    memoryDB.locations = memoryDB.locations.filter(l => l.id !== parseInt(id));
+  },
+  async toggleVisibility(id) {
+    const l = memoryDB.locations.find(x => x.id === parseInt(id));
+    if (l) {
+      const { data, error } = await supabase.from('locations').update({ hidden: !l.hidden }).eq('id', id).select().single();
+      if (!error) l.hidden = data.hidden;
+    }
+  }
+};
+
+export const AdController = {
+  list() { return memoryDB.ads; },
+  async add(data) {
+    const dDate = { ...data, hidden: false, createdAt: new Date().toISOString() };
+    const { data: res, error } = await supabase.from('ads').insert(dDate).select().single();
+    if (error) throw error;
+    memoryDB.ads.push(res);
+    return res;
+  },
+  async update(id, data) {
+    const { data: res, error } = await supabase.from('ads').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    const idx = memoryDB.ads.findIndex(a => a.id === parseInt(id));
+    if (idx !== -1) memoryDB.ads[idx] = res;
+  },
+  async delete(id) {
+    await supabase.from('ads').delete().eq('id', id);
+    memoryDB.ads = memoryDB.ads.filter(a => a.id !== parseInt(id));
+  },
+  async toggleVisibility(id) {
+    const a = memoryDB.ads.find(x => x.id === parseInt(id));
+    if (a) {
+      const { data, error } = await supabase.from('ads').update({ hidden: !a.hidden }).eq('id', id).select().single();
+      if (!error) a.hidden = data.hidden;
+    }
+  }
+};
+
+export const RewardController = {
+  list() { return memoryDB.rewards; },
+  async add(data) {
+    const dDate = { ...data, hidden: false };
+    const { data: res, error } = await supabase.from('rewards').insert(dDate).select().single();
+    if (error) throw error;
+    memoryDB.rewards.push(res);
+  },
+  async update(id, data) {
+    const { data: res, error } = await supabase.from('rewards').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    const idx = memoryDB.rewards.findIndex(r => r.id === parseInt(id));
+    if (idx !== -1) memoryDB.rewards[idx] = res;
+  },
+  async delete(id) {
+    await supabase.from('rewards').delete().eq('id', id);
+    memoryDB.rewards = memoryDB.rewards.filter(r => r.id !== parseInt(id));
+  },
+  async toggleVisibility(id) {
+    const r = memoryDB.rewards.find(x => x.id === parseInt(id));
+    if (r) {
+      const { data, error } = await supabase.from('rewards').update({ hidden: !r.hidden }).eq('id', id).select().single();
+      if (!error) r.hidden = data.hidden;
+    }
   }
 };
 
 export const ReviewController = {
-  list(locationId) { return getDB().reviews.filter(r => r.locationId === parseInt(locationId)); },
-  add(data) {
-    const db = getDB();
-    const r = { id: Date.now(), ...data, createdAt: new Date().toISOString() };
-    db.reviews.push(r);
-    saveDB(db);
-    return r;
+  list(locationId) { return memoryDB.reviews.filter(r => r.locationId === parseInt(locationId)); },
+  async add(data) {
+    const dDate = { ...data, createdAt: new Date().toISOString() };
+    const { data: res, error } = await supabase.from('reviews').insert(dDate).select().single();
+    if (error) throw error;
+    memoryDB.reviews.push(res);
+    return res;
   },
-  delete(id) {
-    const db = getDB();
-    db.reviews = db.reviews.filter(r => r.id !== parseInt(id));
-    saveDB(db);
+  async delete(id) {
+    await supabase.from('reviews').delete().eq('id', id);
+    memoryDB.reviews = memoryDB.reviews.filter(r => r.id !== parseInt(id));
   }
 };
 
 export const UserDB = {
-  list() { return getDB().users; }
+  list() { return memoryDB.users; }
 };

@@ -46,16 +46,20 @@ const PartnerPage = () => {
     refresh();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingAd) {
-      AdController.update(editingAd.id, formData);
-    } else {
-      AdController.add({ ...formData, partnerId: user.id });
+    try {
+      if (editingAd) {
+        await AdController.update(editingAd.id, formData);
+      } else {
+        await AdController.add({ ...formData, partnerId: user.id });
+      }
+      toast('บันทึกโฆษณาสำเร็จ (สถานะตั้งต้น: รอตรวจสอบหรือซ่อน)');
+      setModalOpen(false);
+      refresh();
+    } catch(err) {
+      toast(err.message || 'บันทึกโฆษณาไม่สำเร็จ', 'error');
     }
-    toast('บันทึกโฆษณาสำเร็จ (สถานะตั้งต้น: รอตรวจสอบหรือซ่อน)');
-    setModalOpen(false);
-    refresh();
   };
 
   return (

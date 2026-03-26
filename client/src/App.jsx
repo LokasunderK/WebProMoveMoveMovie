@@ -15,7 +15,25 @@ import RewardsPage from './pages/RewardsPage';
 import AdminPage from './pages/AdminPage';
 import PartnerPage from './pages/PartnerPage';
 
+import { initDB } from './services/db';
+import { Shimmer } from './components/UI';
+
 function App() {
+  const [dbReady, setDbReady] = React.useState(false);
+
+  React.useEffect(() => {
+    initDB().then(() => setDbReady(true));
+  }, []);
+
+  if (!dbReady) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#07070F' }}>
+        <h2 className="font-serif gold-text" style={{ fontSize: 32, marginBottom: 20 }}>Move³Movie</h2>
+        <Shimmer w={200} h={4} style={{ borderRadius: 4 }} />
+      </div>
+    );
+  }
+
   return (
     <AppProvider>
       <Layout>

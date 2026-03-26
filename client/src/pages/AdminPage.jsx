@@ -46,18 +46,22 @@ const AdminPage = () => {
     refresh();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (modalType === 'movies') {
-      if (editingItem) MovieController.update(editingItem.id, formData);
-      else MovieController.add(formData);
-    } else if (modalType === 'locations') {
-      if (editingItem) LocationController.update(editingItem.id, formData);
-      else LocationController.add(formData);
+    try {
+      if (modalType === 'movies') {
+        if (editingItem) await MovieController.update(editingItem.id, formData);
+        else await MovieController.add(formData);
+      } else if (modalType === 'locations') {
+        if (editingItem) await LocationController.update(editingItem.id, formData);
+        else await LocationController.add(formData);
+      }
+      toast('บันทึกข้อมูลสำเร็จ');
+      setModalType(null);
+      refresh();
+    } catch(err) {
+      toast(err.message || 'บันทึกข้อมูลไม่สำเร็จ', 'error');
     }
-    toast('บันทึกข้อมูลสำเร็จ');
-    setModalType(null);
-    refresh();
   };
 
   // --- Data rendering helpers ---
