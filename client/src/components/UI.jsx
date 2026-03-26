@@ -101,6 +101,45 @@ export const MapPicker = ({ lat, lng, onPick, height = 280 }) => {
   const pickerMapRef = useRef(null);
   const pickerMapInstance = useRef(null);
   const makerInstance = useRef(null);
+  const [search, setSearch] = useState('');
+  const [searching, setSearching] = useState(false);
+
+  // Search function using Nominatim (Free OpenStreetMap Geocoder)
+  const handleSearch = async (e) => {
+    e?.preventDefault();
+    if (!search || !pickerMapInstance.current) return;
+    setSearching(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(search)}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        const newLat = parseFloat(lat);
+        const newLng = parseFloat(lon);
+        
+        pickerMapInstance.current.setView([newLat, newLng], 14);
+        
+        if (makerInstance.current) {
+          makerInstance.current.setLatLng([newLat, newLng]);
+        } else {
+          const goldIcon = window.L.divIcon({
+            className: '',
+            html: `<div style="width:28px;height:28px;background:linear-gradient(135deg,#E8A020,#C47010);border-radius:50%;border:4px solid #fff;box-shadow:0 0 20px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:14px;">⭐️</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 28],
+          });
+          makerInstance.current = window.L.marker([newLat, newLng], { icon: goldIcon }).addTo(pickerMapInstance.current);
+        }
+        onPick(newLat, newLng);
+      } else {
+        alert('ไม่พบสถานที่นี้ ลองพิมพ์ใหม่ให้ละเอียดขึ้นครับ');
+      }
+    } catch (err) {
+      console.error('Search failed:', err);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   useEffect(() => {
     if (!pickerMapRef.current || !window.L || pickerMapInstance.current) return;
@@ -142,10 +181,30 @@ export const MapPicker = ({ lat, lng, onPick, height = 280 }) => {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <Label>จิ้มพิกัดบนแผนที่ (หรือจะกรอกเลขข้างล่างเอาเองก็ได้ครับ):</Label>
+      <Label>ค้นหาและปักหมุดสถานที่:</Label>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <input 
+          type="text" 
+          value={search} 
+          onChange={e => setSearch(e.target.value)} 
+          placeholder="พิมพ์ชื่อสถานที่เพื่อค้นหา... (เช่น วัดโพธิ์, เกาะล้าน)" 
+          className="inp"
+          style={{ flex: 1 }}
+          onKeyDown={e => e.key === 'Enter' && handleSearch()}
+        />
+        <button 
+          type="button" 
+          onClick={handleSearch} 
+          disabled={searching}
+          className="btn-gold" 
+          style={{ padding: '0 16px', borderRadius: 10, flexShrink: 0, fontSize: 13 }}
+        >
+          {searching ? 'กำลังค้น...' : 'ค้นหา'}
+        </button>
+      </div>
       <div ref={pickerMapRef} style={{ height, borderRadius: 12, border: '1px solid rgba(255,255,255,.1)', marginBottom: 8, cursor: 'crosshair' }} />
       <div style={{ fontSize: 11, color: 'var(--gold)', textAlign: 'center', opacity: 0.8 }}>
-         👆 คลิกเพื่อเปลี่ยนตำแหน่งพิกัดแม่นๆ
+         👆 ค้นหาแล้วคลิกบนแผนที่เพื่อยืนยันพิกัดที่แม่นยำ
       </div>
     </div>
   );
