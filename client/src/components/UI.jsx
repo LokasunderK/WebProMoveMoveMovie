@@ -103,42 +103,70 @@ export const MapPicker = ({ lat, lng, onPick, height = 280 }) => {
   const makerInstance = useRef(null);
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
+  const [results, setResults] = useState([]);
 
-  // Search function using Nominatim (Free OpenStreetMap Geocoder)
+  // Extract province from address data (Thailand format)
+  const extractProvince = (addr) => {
+    if (!addr) return '';
+    // Nominatim uses 'state' or 'province' or 'city_district' for Thai provinces
+    const p = addr.province || addr.state || addr.city || addr.town || addr.village;
+    return p ? p.replace('จังหวัด', '').replace('Province', '').trim() : '';
+  };
+
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+      const data = await res.json();
+      if (data && data.address) {
+        return extractProvince(data.address);
+      }
+    } catch (err) {
+      console.error('Reverse Geocode failed:', err);
+    }
+    return '';
+  };
+
   const handleSearch = async (e) => {
     e?.preventDefault();
     if (!search || !pickerMapInstance.current) return;
     setSearching(true);
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(search)}`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(search)}&addressdetails=1&limit=5`);
       const data = await res.json();
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0];
-        const newLat = parseFloat(lat);
-        const newLng = parseFloat(lon);
-        
-        pickerMapInstance.current.setView([newLat, newLng], 14);
-        
-        if (makerInstance.current) {
-          makerInstance.current.setLatLng([newLat, newLng]);
-        } else {
-          const goldIcon = window.L.divIcon({
-            className: '',
-            html: `<div style="width:28px;height:28px;background:linear-gradient(135deg,#E8A020,#C47010);border-radius:50%;border:4px solid #fff;box-shadow:0 0 20px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:14px;">⭐️</div>`,
-            iconSize: [28, 28],
-            iconAnchor: [14, 28],
-          });
-          makerInstance.current = window.L.marker([newLat, newLng], { icon: goldIcon }).addTo(pickerMapInstance.current);
-        }
-        onPick(newLat, newLng);
-      } else {
-        alert('ไม่พบสถานที่นี้ ลองพิมพ์ใหม่ให้ละเอียดขึ้นครับ');
-      }
+      setResults(data || []);
+      if (!data || data.length === 0) alert('ไม่พบสถานที่นี้ ลองระบุชื่อให้ชัดเจนขึ้นครับ');
     } catch (err) {
       console.error('Search failed:', err);
     } finally {
       setSearching(false);
     }
+  };
+
+  const selectPlace = (place) => {
+    if (!pickerMapInstance.current) return;
+    const newLat = parseFloat(place.lat);
+    const newLng = parseFloat(place.lon);
+    const province = extractProvince(place.address);
+    
+    pickerMapInstance.current.setView([newLat, newLng], 15);
+    
+    const L = window.L;
+    const goldIcon = L.divIcon({
+      className: '',
+      html: `<div style="width:28px;height:28px;background:linear-gradient(135deg,#E8A020,#C47010);border-radius:50%;border:4px solid #fff;box-shadow:0 0 20px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:14px;">⭐️</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+    });
+
+    if (makerInstance.current) {
+      makerInstance.current.setLatLng([newLat, newLng]);
+    } else {
+      makerInstance.current = L.marker([newLat, newLng], { icon: goldIcon }).addTo(pickerMapInstance.current);
+    }
+    
+    onPick(newLat, newLng, province);
+    setResults([]); 
+    setSearch(place.display_name.split(',')[0]); 
   };
 
   useEffect(() => {
@@ -165,14 +193,17 @@ export const MapPicker = ({ lat, lng, onPick, height = 280 }) => {
       makerInstance.current = L.marker([lat, lng], { icon: goldIcon }).addTo(map);
     }
 
-    map.on('click', (e) => {
+    map.on('click', async (e) => {
       const { lat, lng } = e.latlng;
       if (makerInstance.current) {
         makerInstance.current.setLatLng(e.latlng);
       } else {
         makerInstance.current = L.marker(e.latlng, { icon: goldIcon }).addTo(map);
       }
-      onPick(lat, lng);
+      
+      const province = await reverseGeocode(lat, lng);
+      onPick(lat, lng, province);
+      setResults([]); 
     });
 
     pickerMapInstance.current = map;
@@ -182,29 +213,49 @@ export const MapPicker = ({ lat, lng, onPick, height = 280 }) => {
   return (
     <div style={{ marginBottom: 16 }}>
       <Label>ค้นหาและปักหมุดสถานที่:</Label>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <input 
-          type="text" 
-          value={search} 
-          onChange={e => setSearch(e.target.value)} 
-          placeholder="พิมพ์ชื่อสถานที่เพื่อค้นหา... (เช่น วัดโพธิ์, เกาะล้าน)" 
-          className="inp"
-          style={{ flex: 1 }}
-          onKeyDown={e => e.key === 'Enter' && handleSearch()}
-        />
-        <button 
-          type="button" 
-          onClick={handleSearch} 
-          disabled={searching}
-          className="btn-gold" 
-          style={{ padding: '0 16px', borderRadius: 10, flexShrink: 0, fontSize: 13 }}
-        >
-          {searching ? 'กำลังค้น...' : 'ค้นหา'}
-        </button>
+      <div style={{ position: 'relative', marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input 
+            type="text" 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            placeholder="เช่น KMITL, Central World..." 
+            className="inp"
+            style={{ flex: 1 }}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          />
+          <button 
+            type="button" 
+            onClick={handleSearch} 
+            disabled={searching}
+            className="btn-gold" 
+            style={{ padding: '0 16px', borderRadius: 10, flexShrink: 0, fontSize: 13 }}
+          >
+            {searching ? 'รอ...' : 'ค้นหา'}
+          </button>
+        </div>
+
+        {results.length > 0 && (
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1A1A24', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, marginTop: 4, zIndex: 1000, boxShadow: '0 10px 30px rgba(0,0,0,.5)', overflow: 'hidden' }}>
+            {results.map((r, i) => (
+              <div 
+                key={i} 
+                onClick={() => selectPlace(r)}
+                style={{ padding: '12px 16px', borderBottom: i < results.length - 1 ? '1px solid rgba(255,255,255,.05)' : 'none', cursor: 'pointer', transition: 'background .2s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(232,160,32,0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 2 }}>{r.display_name.split(',')[0]}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.display_name}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+      
       <div ref={pickerMapRef} style={{ height, borderRadius: 12, border: '1px solid rgba(255,255,255,.1)', marginBottom: 8, cursor: 'crosshair' }} />
       <div style={{ fontSize: 11, color: 'var(--gold)', textAlign: 'center', opacity: 0.8 }}>
-         👆 ค้นหาแล้วคลิกบนแผนที่เพื่อยืนยันพิกัดที่แม่นยำ
+         👆 เลือกผลการค้นหา หรือคลิกบนแผนที่เพื่อระบุจังหวัดอัตโนมัติ
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, MapPin, Film } from 'lucide-react';
 import { Shimmer, Particles } from '../components/UI';
-import { MovieController } from '../services/db';
+import { MovieController, LocationController } from '../services/db';
 
 const MovieDetailPage = () => {
   const { id } = useParams();
@@ -17,10 +17,13 @@ const MovieDetailPage = () => {
       const db = MovieController.get(id);
       if (db) {
         setMovie(db);
+        document.title = `Move³Movie | ${db.title || 'หนัง'}`;
         setScenes(MovieController.scenes(parseInt(id)));
       }
       setLoading(false);
     }, 400);
+
+    return () => { document.title = 'Move³Movie'; };
   }, [id]);
 
   if (loading) {
@@ -89,25 +92,31 @@ const MovieDetailPage = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 24 }}>
             {scenes.length > 0 ? (
-              scenes.map(scene => (
-                <div key={scene.id} className="card-hover" onClick={() => navigate(`/location/${scene.locationId}`)}
-                  style={{ cursor: 'pointer', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 16, overflow: 'hidden' }}>
-                  <div style={{ height: 200, position: 'relative' }}>
-                    <img src={scene.imgUrl || `https://picsum.photos/400/250?scene=${scene.id}`} alt="scene" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 60%, rgba(13,13,26,.9))' }} />
-                  </div>
-                  <div style={{ padding: '20px' }}>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                      <MapPin size={18} color="var(--gold)" />
-                      <div style={{ fontWeight: 600, fontSize: 15 }}>ดูรายละเอียดสถานที่</div>
+              scenes.map(scene => {
+                // Find location name for this scene (Fixing the crash by using LocationController)
+                const locData = LocationController.get(scene.locationId);
+                const locName = locData ? locData.name : 'ดูรายละเอียดสถานที่';
+                
+                return (
+                  <div key={scene.id} className="card-hover" onClick={() => navigate(`/location/${scene.locationId}`)}
+                    style={{ cursor: 'pointer', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 16, overflow: 'hidden' }}>
+                    <div style={{ height: 200, position: 'relative' }}>
+                      <img src={scene.imgUrl || `https://picsum.photos/400/250?scene=${scene.id}`} alt="scene" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 60%, rgba(13,13,26,.9))' }} />
                     </div>
-                    <p style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
-                      <Film size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }}/>
-                      ฉาก: {scene.description}
-                    </p>
+                    <div style={{ padding: '20px' }}>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                        <MapPin size={18} color="var(--gold)" />
+                        <div style={{ fontWeight: 600, fontSize: 16, color: '#fff' }}>{locName}</div>
+                      </div>
+                      <p style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                        <Film size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }}/>
+                        ฉาก: {scene.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div style={{ gridColumn: '1 / -1', padding: '60px', textAlign: 'center', background: 'rgba(255,255,255,.02)', borderRadius: 16, border: '1px dashed rgba(255,255,255,.1)' }}>
                 <p style={{ color: 'var(--muted)' }}>ยังไม่มีข้อมูลสถานที่ถ่ายทำสำหรับภาพยนตร์เรื่องนี้</p>

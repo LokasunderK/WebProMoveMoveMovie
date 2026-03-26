@@ -27,6 +27,7 @@ const LocationPage = () => {
       const data = LocationController.get(parsedId);
       if (data) {
         setLoc(data);
+        document.title = `Move³Movie | ${data.name || 'สถานที่'}`;
         setAds(AdController.list().filter(a => !a.hidden)); // In a real app, distance based
         setReviews(ReviewController.list(parsedId));
         
@@ -37,6 +38,8 @@ const LocationPage = () => {
       }
       setLoading(false);
     }, 400);
+
+    return () => { document.title = 'Move³Movie'; };
   }, [id]);
 
   const submitReview = (e) => {

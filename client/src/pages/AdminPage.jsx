@@ -217,7 +217,14 @@ const AdminPage = () => {
               <MapPicker 
                 lat={formData.lat} 
                 lng={formData.lng} 
-                onPick={(lat, lng) => setFormData({ ...formData, lat, lng })} 
+                onPick={(lat, lng, province) => {
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    lat, 
+                    lng, 
+                    province: province || prev.province 
+                  }));
+                }} 
               />
 
               <div style={{ display: 'flex', gap: 16 }}>
