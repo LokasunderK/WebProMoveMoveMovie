@@ -16,20 +16,20 @@ const AuthPage = () => {
   const [pass, setPass] = useState('');
   const [name, setName] = useState('');
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const u = AuthController.login(email, pass);
+    const u = await AuthController.login(email, pass);
     if (!u) return setErr('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     login(u);
     toast('เข้าสู่ระบบสำเร็จ');
     navigate('/');
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (!name || !email || !pass) return setErr('กรุณากรอกข้อมูลให้ครบถ้วน');
     try {
-      const u = AuthController.register(email, pass, name);
+      const u = await AuthController.register(email, pass, name);
       login(u);
       toast('สมัครสมาชิกสำเร็จ (ยินดีต้อนรับ +100 แต้ม)');
       navigate('/');

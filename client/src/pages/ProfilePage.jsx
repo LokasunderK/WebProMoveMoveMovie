@@ -1,4 +1,8 @@
+import React from 'react';
+import { User, Gift, Clock, Star } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
+import { PointController } from '../services/db';
 
 const ProfilePage = () => {
   const { user } = useAppContext();
@@ -11,7 +15,7 @@ const ProfilePage = () => {
       <div className="animate-fadeUp">
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 40, borderBottom: '1px solid rgba(255,255,255,.08)', paddingBottom: 40 }}>
           <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'linear-gradient(135deg, var(--gold), var(--gold-dim))', color: '#07070F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, fontWeight: 700, flexShrink: 0 }}>
-            {user.name.charAt(0).toUpperCase()}
+            {user?.name?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>

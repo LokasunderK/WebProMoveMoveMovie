@@ -3,6 +3,7 @@ import { Eye, EyeOff, Trash2, Edit2, Plus, Users, Film, MapPin, LayoutDashboard,
 import { Modal, Field, MapPicker } from '../components/UI';
 import { useAppContext } from '../context/AppContext';
 import { UserDB, MovieController, LocationController, AdController } from '../services/db';
+import { Navigate } from 'react-router-dom';
 
 const AdminPage = () => {
   const { user, toast } = useAppContext();
@@ -14,7 +15,7 @@ const AdminPage = () => {
   const [formData, setFormData] = useState({});
 
   if (!user || user.role !== 'admin') {
-    return <div style={{ textAlign: 'center', padding: '120px 24px' }}><h3>ไม่มีสิทธิ์เข้าถึงหน้านี้</h3></div>;
+    return <Navigate to="/auth" />;
   }
 
   const refresh = () => setUpdater(x => x + 1);
