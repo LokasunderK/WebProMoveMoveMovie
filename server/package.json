@@ -1,0 +1,25 @@
+{
+  "name": "movemovemovie-server",
+  "version": "1.0.0",
+  "description": "Move³Movie API Server — Thai Film Location Finder",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "seed": "node database/seed.js"
+  },
+  "keywords": ["movie", "thailand", "film-locations"],
+  "author": "KMITL",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.13.6",
+    "better-sqlite3": "^12.8.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
