@@ -132,7 +132,8 @@ export const AuthController = {
       throw new Error('อีเมลนี้ถูกใช้งานแล้ว');
     }
     
-    const nw = { email, password: pass, name, role: 'member', createdAt: new Date().toISOString() };
+    // Supabase column is createdat (lowercase)
+    const nw = { email, password: pass, name, role: 'member', createdat: new Date().toISOString() };
     const { data, error } = await supabase.from('users').insert(nw).select().single();
     if (error) throw new Error(error.message);
     
