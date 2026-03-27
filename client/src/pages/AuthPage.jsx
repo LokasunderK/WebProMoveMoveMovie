@@ -39,19 +39,19 @@ const AuthPage = () => {
   };
 
   return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '100px 24px' }}>
-      <div className="animate-fadeUp" style={{ background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 24, padding: '40px 32px', width: '100%', maxWidth: 420 }}>
+    <div className="min-h-[80vh] flex items-center justify-center py-[100px] px-6">
+      <div className="animate-fade-up bg-card border border-white/10 rounded-3xl p-10 w-full max-w-[420px] max-md:p-8 shrink-0">
         
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <h1 className="font-serif" style={{ fontSize: 32, margin: '0 0 8px' }}>Move<span className="gold-text">³</span>Movie</h1>
-          <p style={{ color: 'var(--muted)', fontSize: 14 }}>ระบบแนะนำสถานที่ถ่ายทำตามรอยภาพยนตร์</p>
+        <div className="text-center mb-8">
+          <h1 className="font-serif text-[32px] m-0 mb-2">Move<span className="gold-text">³</span>Movie</h1>
+          <p className="text-muted text-[14px]">ระบบแนะนำสถานที่ถ่ายทำตามรอยภาพยนตร์</p>
         </div>
 
-        <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,.08)', marginBottom: 28 }}>
+        <div className="flex border-b border-white/10 mb-7">
           {[['login', 'เข้าสู่ระบบ'], ['register', 'สมัครสมาชิก']].map(([v, l]) => (
             <button key={v} onClick={() => { setTab(v); setErr(''); }}
-              className={`tab-item${tab === v ? ' active' : ''}`}
-              style={{ flex: 1, textAlign: 'center', fontSize: 14, padding: '10px 0', marginBottom: -1, display: 'flex', justifyContent: 'center', gap: 6 }}>
+              className={`flex-1 text-center text-[14px] py-2.5 -mb-[1px] flex items-center justify-center gap-1.5 transition-all outline-none bg-transparent border-none border-b-[2px] cursor-pointer 
+                ${tab === v ? 'text-gold border-gold font-medium' : 'text-muted border-transparent hover:text-main'}`}>
               {v === 'login' ? <LogIn size={16} /> : <UserPlus size={16} />} 
               {l}
             </button>
@@ -59,7 +59,7 @@ const AuthPage = () => {
         </div>
 
         {err && (
-          <div style={{ background: 'rgba(255,107,107,.1)', border: '1px solid rgba(255,107,107,.3)', color: '#FF6B6B', padding: '12px 16px', borderRadius: 10, fontSize: 13, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="bg-red-500/10 border border-red-500/30 text-red-500 px-4 py-3 rounded-[10px] text-[13px] mb-6 flex items-center gap-2">
             <AlertCircle size={16} /> {err}
           </div>
         )}
@@ -67,29 +67,29 @@ const AuthPage = () => {
         {tab === 'login' ? (
           <form onSubmit={handleLogin}>
             <Field label="อีเมล">
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="inp" placeholder="admin@mmm.com" />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full py-2.5 px-3.5 bg-white/5 border border-white/10 rounded-xl text-main text-sm outline-none transition-all focus:border-gold/50 focus:ring-4 focus:ring-gold/10 placeholder:text-muted" placeholder="admin@mmm.com" />
             </Field>
             <Field label="รหัสผ่าน">
-              <input type="password" value={pass} onChange={e => setPass(e.target.value)} className="inp" placeholder="••••••••" />
+              <input type="password" value={pass} onChange={e => setPass(e.target.value)} className="w-full py-2.5 px-3.5 bg-white/5 border border-white/10 rounded-xl text-main text-sm outline-none transition-all focus:border-gold/50 focus:ring-4 focus:ring-gold/10 placeholder:text-muted" placeholder="••••••••" />
             </Field>
-            <button type="submit" className="btn-gold" style={{ width: '100%', padding: '12px 0', borderRadius: 10, marginTop: 16 }}>
-              <LogIn size={16} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+            <button type="submit" className="btn-gold w-full py-3 rounded-xl mt-4 text-[14px] flex items-center justify-center gap-2">
+              <LogIn size={16} />
               เข้าสู่ระบบ
             </button>
           </form>
         ) : (
           <form onSubmit={handleRegister}>
             <Field label="ชื่อ-นามสกุล">
-              <input type="text" value={name} onChange={e => setName(e.target.value)} className="inp" placeholder="สมชาย ใจดี" />
+              <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full py-2.5 px-3.5 bg-white/5 border border-white/10 rounded-xl text-main text-sm outline-none transition-all focus:border-gold/50 focus:ring-4 focus:ring-gold/10 placeholder:text-muted" placeholder="สมชาย ใจดี" />
             </Field>
             <Field label="อีเมล">
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="inp" placeholder="somchai@example.com" />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full py-2.5 px-3.5 bg-white/5 border border-white/10 rounded-xl text-main text-sm outline-none transition-all focus:border-gold/50 focus:ring-4 focus:ring-gold/10 placeholder:text-muted" placeholder="somchai@example.com" />
             </Field>
             <Field label="รหัสผ่าน">
-              <input type="password" value={pass} onChange={e => setPass(e.target.value)} className="inp" placeholder="••••••••" />
+              <input type="password" value={pass} onChange={e => setPass(e.target.value)} className="w-full py-2.5 px-3.5 bg-white/5 border border-white/10 rounded-xl text-main text-sm outline-none transition-all focus:border-gold/50 focus:ring-4 focus:ring-gold/10 placeholder:text-muted" placeholder="••••••••" />
             </Field>
-            <button type="submit" className="btn-gold" style={{ width: '100%', padding: '12px 0', borderRadius: 10, marginTop: 16 }}>
-              <UserPlus size={16} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+            <button type="submit" className="btn-gold w-full py-3 rounded-xl mt-4 text-[14px] flex items-center justify-center gap-2">
+              <UserPlus size={16} />
               สร้างบัญชีใหม่
             </button>
           </form>

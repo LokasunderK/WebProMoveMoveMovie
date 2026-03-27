@@ -1,32 +1,39 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
-import { ScrollToTop, ToastMsg } from './UI';
+import { ScrollToTop, ToastMsg, ConfirmDialog } from './UI';
 import { useAppContext } from '../context/AppContext';
 
 const Layout = ({ children }) => {
-  const { toastData, setToastData } = useAppContext();
+  const { toastData, setToastData, confirmData, setConfirmData } = useAppContext();
+  const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [location.pathname]);
 
   return (
     <>
       <Navbar />
-      <main className="animate-pageEnter" style={{ minHeight: '80vh' }}>
+      <main className="animate-page-enter min-h-[80vh]">
         {children}
       </main>
       
-      <footer style={{ background: '#0A0A14', borderTop: '1px solid rgba(255,255,255,.05)', padding: '46px 24px 36px', textAlign: 'center', marginTop: 'auto' }}>
-        <div className="font-serif" style={{ fontSize: 22, marginBottom: 10 }}>
+      <footer className="bg-[#0A0A14] border-t border-white/5 px-6 pt-11 pb-9 text-center mt-auto">
+        <div className="font-serif text-[22px] mb-2.5">
           Move<span className="gold-text">³</span>Movie
         </div>
-        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 8px' }}>
+        <p className="text-muted text-[13px] m-0 mb-2">
           ระบบแนะนำสถานที่ถ่ายทำ ตามรอยภาพยนตร์ไทย
         </p>
-        <div style={{ width: 80, height: 1, background: 'rgba(232,160,32,.2)', margin: '16px auto' }} />
-        <p style={{ color: '#3A3A4A', fontSize: 11, margin: 0 }}>
-          KMITL · Software Analysis & Design · 05506113 · ปีการศึกษา 2/2568
+        <div className="w-20 h-px bg-gold/20 mx-auto my-4" />
+        <p className="text-[#3A3A4A] text-[11px] m-0">
+          KMITL · Software Analysis &amp; Design · 05506113 · ปีการศึกษา 2/2568
         </p>
       </footer>
       
       <ScrollToTop />
+      
       {toastData && (
         <ToastMsg 
           key={toastData.key} 
@@ -35,6 +42,12 @@ const Layout = ({ children }) => {
           onClose={() => setToastData(null)} 
         />
       )}
+
+      <ConfirmDialog
+        data={confirmData}
+        onConfirm={() => confirmData?.onConfirm?.()}
+        onCancel={() => setConfirmData(null)}
+      />
     </>
   );
 };

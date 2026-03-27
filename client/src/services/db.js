@@ -21,7 +21,6 @@ let memoryDB = {
 const normalize = (list) => (list || []).map(item => {
   const obj = {};
   Object.keys(item).forEach(k => {
-    // Map common lowercased keys to CamelCase required by the App
     let key = k;
     if (k === 'movieid') key = 'movieId';
     if (k === 'locationid') key = 'locationId';
@@ -65,8 +64,10 @@ export const initDB = async () => {
     if (!pRes.error) {
       const pmap = {};
       (pRes.data || []).forEach(p => {
-         const uid = p.userId || p.userid;
-         pmap[uid] = p.amount;
+         const uid = p.userId || p.userid || p.user_id;
+         if (uid !== undefined && uid !== null) {
+           pmap[uid] = p.amount;
+         }
       });
       memoryDB.points = pmap;
     }
@@ -96,35 +97,100 @@ const denormalize = (data) => {
 
 export const AuthController = {
   async login(email, pass) {
-    // In a real app we'd use Supabase Auth. For compatibility we look up the table.
-    const u = memoryDB.users.find(u => u.email === email && u.password === pass);
+    // Look up user by email first, then check password
+    // Try both in-memory (which already loaded) and direct Supabase query
+    let u = memoryDB.users.find(u => 
+      u.email && u.email.toLowerCase() === email.toLowerCase() && u.password === pass
+    );
+    
+    // If not found in memory cache (e.g. newly registered), query Supabase directly
+    if (!u) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .ilike('email', email)
+        .eq('password', pass)
+        .single();
+      
+      if (!error && data) {
+        u = normalize([data])[0];
+        // Add to memory cache if missing
+        const existing = memoryDB.users.findIndex(x => x.id === u.id);
+        if (existing === -1) memoryDB.users.push(u);
+        
+        // Also load points for this user
+        const { data: pData } = await supabase.from('points').select('*').eq('userid', u.id).single();
+        if (pData) memoryDB.points[u.id] = pData.amount;
+      }
+    }
+    
     return u || null;
   },
+
   async register(email, pass, name) {
-    if (memoryDB.users.find(u => u.email === email)) throw new Error('Email already exists');
+    if (memoryDB.users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase())) {
+      throw new Error('อีเมลนี้ถูกใช้งานแล้ว');
+    }
+    
     const nw = { email, password: pass, name, role: 'member', createdAt: new Date().toISOString() };
     const { data, error } = await supabase.from('users').insert(nw).select().single();
     if (error) throw new Error(error.message);
-    memoryDB.users.push(data);
     
-    // Welcome points
-    const { data: pData } = await supabase.from('points').insert({ userId: data.id, amount: 100 }).select().single();
-    memoryDB.points[data.id] = (pData?.amount || 100);
-    return data;
+    const normalizedUser = normalize([data])[0];
+    memoryDB.users.push(normalizedUser);
+    
+    // Give welcome 100 points - insert to DB
+    try {
+      const pointPayload = { userid: normalizedUser.id, amount: 100 };
+      const { data: pData, error: pError } = await supabase
+        .from('points')
+        .insert(pointPayload)
+        .select()
+        .single();
+      
+      if (!pError && pData) {
+        memoryDB.points[normalizedUser.id] = pData.amount;
+        console.log('✅ Welcome points granted:', pData);
+      } else if (pError) {
+        // Try upsert in case userid column name differs
+        console.warn('Points insert failed, trying upsert:', pError.message);
+        await supabase.from('points').upsert({ userid: normalizedUser.id, amount: 100 });
+        memoryDB.points[normalizedUser.id] = 100;
+      }
+    } catch (pErr) {
+      console.error('Failed to grant welcome points:', pErr);
+      memoryDB.points[normalizedUser.id] = 100; // set in memory at least
+    }
+    
+    return normalizedUser;
   }
 };
 
 export const PointController = {
-  get(userId) { return memoryDB.points[userId] || 0; },
+  get(userId) { 
+    if (userId === undefined || userId === null) return 0;
+    return memoryDB.points[userId] || 0; 
+  },
   async spend(userId, amount) {
     const current = memoryDB.points[userId] || 0;
     if (current < amount) throw new Error('Not enough points');
     const nw = current - amount;
     
-    const { error } = await supabase.from('points').update({ amount: nw }).eq('userId', userId);
+    const { error } = await supabase.from('points').update({ amount: nw }).eq('userid', userId);
     if (error) throw new Error(error.message);
     
     memoryDB.points[userId] = nw;
+  },
+  async add(userId, amount) {
+    const current = memoryDB.points[userId] || 0;
+    const nw = current + amount;
+    
+    // Upsert (update or insert)
+    const { error } = await supabase.from('points').upsert({ userid: userId, amount: nw });
+    if (error) console.error('Failed to add points:', error.message);
+    
+    memoryDB.points[userId] = nw;
+    return nw;
   }
 };
 
@@ -132,7 +198,6 @@ export const MovieController = {
   list() { return memoryDB.movies; },
   get(id) { return memoryDB.movies.find(m => m.id === parseInt(id)); },
   scenes(movieId) { 
-    // PostgreSQL usually lowercases column names like 'movieId' to 'movieid' 
     return memoryDB.scenes.filter(s => 
       (s.movieId === parseInt(movieId)) || (s.movieid === parseInt(movieId))
     ); 

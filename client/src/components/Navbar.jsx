@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Film, Map, Gift, User, Settings, Megaphone, Clapperboard, LogOut, Star } from 'lucide-react';
+import { Home, Film, Map, Gift, User, Settings, Megaphone, Clapperboard, LogOut, Star, Menu, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { PointController } from '../services/db';
 
@@ -32,60 +32,67 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="nav-blur" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, height: 62 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav className="fixed top-0 left-0 right-0 z-[1000] h-[62px] bg-[#07070F]/82 backdrop-blur-[22px] border-b border-gold/10">
+        <div className="max-w-[1200px] mx-auto px-6 h-full flex items-center justify-between">
           
-          <button onClick={() => navTo('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9 }}>
-            <Clapperboard color="var(--gold)" size={24} />
-            <span className="font-serif" style={{ fontSize: 18, color: 'var(--text)', fontWeight: 700 }}>
+          <button onClick={() => navTo('/')} className="bg-transparent border-none cursor-pointer flex items-center gap-[9px]">
+            <Clapperboard className="text-gold" size={24} />
+            <span className="font-serif text-[18px] text-main font-bold mt-1">
               Move<span className="gold-text">³</span>Movie
             </span>
           </button>
           
-          <div className="nav-items" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <div className="hidden md:flex items-center gap-0.5">
             {links.map(lk => {
               const active = page === lk.id || (lk.id !== '/' && page.startsWith(lk.id));
               return (
                 <button key={lk.id} onClick={() => navTo(lk.id)}
-                  className="tab-item"
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 13, color: active ? 'var(--gold)' : 'var(--muted)', borderBottom: active ? '2px solid var(--gold)' : '2px solid transparent' }}>
-                  <lk.icon size={15} /> {lk.l}
+                  className={`bg-transparent cursor-pointer font-sans text-[13px] font-medium px-3.5 py-1.5 border-b-[2px] transition-all -mb-[2px] flex items-center gap-1.5 
+                  ${active ? 'text-gold border-gold' : 'text-muted border-transparent hover:text-main'}`}>
+                  <lk.icon size={15} className="inline-block align-middle" /> {lk.l}
                 </button>
               );
             })}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="flex items-center gap-[10px]">
             {user ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(232,160,32,.1)', border: '1px solid rgba(232,160,32,.22)', borderRadius: 20, padding: '4px 13px', fontSize: 13, color: 'var(--gold)', fontWeight: 600 }}>
-                  <Star size={14} fill="var(--gold)" /> {pts}
+                <div className="flex items-center gap-1 bg-gold/10 border border-gold/20 rounded-full px-[13px] py-1 text-[13px] text-gold font-semibold">
+                  <Star size={14} className="fill-gold" /> {pts}
                 </div>
-                <button onClick={logout} className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 9, padding: '6px 14px', fontSize: 13 }}>
-                  <LogOut size={14} /> ออก
+                <button onClick={logout} className="bg-white/5 text-muted border border-white/10 cursor-pointer transition-all hover:border-gold/30 hover:text-gold flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-[13px]">
+                  <LogOut size={14} className="inline-block align-middle" /> ออก
                 </button>
               </>
             ) : (
-              <button onClick={() => navTo('/auth')} className="btn-gold" style={{ borderRadius: 10, padding: '8px 20px', fontSize: 13 }}>เข้าสู่ระบบ</button>
+              <button onClick={() => navTo('/auth')} className="bg-gradient-to-br from-gold to-gold-dim text-[#07070F] font-semibold border-none cursor-pointer transition-all hover:from-gold-light hover:to-gold hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(232,160,32,0.38)] rounded-[10px] px-5 py-2 text-[13px]">
+                เข้าสู่ระบบ
+              </button>
             )}
             
-            <button className={`hamburger ${mobileOpen ? 'open' : ''}`} onClick={() => setMobileOpen(!mobileOpen)}>
-              <span /><span /><span />
+            <button className="md:hidden flex flex-col gap-[5px] bg-transparent border-none cursor-pointer p-1" onClick={() => setMobileOpen(!mobileOpen)}>
+               {mobileOpen ? <X className="text-muted" size={24}/> : <Menu className="text-muted" size={24}/>}
             </button>
           </div>
         </div>
       </nav>
       
-      <div className={`mobile-menu ${mobileOpen ? 'open' : ''}`} style={{ display: mobileOpen ? 'flex' : 'none' }}>
-        {links.map(lk => {
-          const active = page === lk.id || (lk.id !== '/' && page.startsWith(lk.id));
-          return (
-            <button key={lk.id} onClick={() => navTo(lk.id)} className={active ? 'active' : ''} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <lk.icon size={18} /> {lk.l}
-            </button>
-          );
-        })}
-      </div>
+      {/* Mobile Menu */}
+      {mobileOpen && (
+        <div className="fixed top-[62px] left-0 right-0 z-[999] bg-[#07070F]/97 backdrop-blur-[20px] border-b border-gold/10 flex flex-col p-3 animate-fade-in md:hidden">
+          {links.map(lk => {
+            const active = page === lk.id || (lk.id !== '/' && page.startsWith(lk.id));
+            return (
+              <button key={lk.id} onClick={() => navTo(lk.id)} 
+                className={`bg-transparent border-none font-sans text-[15px] p-[14px_16px] cursor-pointer text-left rounded-[10px] transition-all flex items-center gap-[10px] w-full
+                ${active ? 'bg-gold/10 text-gold' : 'text-muted hover:bg-gold/10 hover:text-gold'}`}>
+                <lk.icon size={18} className="inline-block align-middle" /> {lk.l}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 };

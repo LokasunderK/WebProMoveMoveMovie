@@ -27,9 +27,9 @@ function App() {
 
   if (!dbReady) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#07070F' }}>
-        <h2 className="font-serif gold-text" style={{ fontSize: 32, marginBottom: 20 }}>Move³Movie</h2>
-        <Shimmer w={200} h={4} style={{ borderRadius: 4 }} />
+      <div className="h-screen flex flex-col items-center justify-center bg-bg relative px-6">
+        <h2 className="font-serif gold-text text-[42px] mb-6">Move³Movie</h2>
+        <Shimmer w={200} h={4} className="rounded" />
       </div>
     );
   }

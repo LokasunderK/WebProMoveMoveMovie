@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
 
 export const Particles = ({ count = 20 }) => {
   const particles = useMemo(() =>
@@ -106,10 +106,8 @@ export const MapPicker = ({ lat, lng, onPick, height = 280 }) => {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState([]);
 
-  // Extract province from address data (Thailand format)
   const extractProvince = (addr) => {
     if (!addr) return '';
-    // Nominatim uses 'state' or 'province' or 'city_district' for Thai provinces
     const p = addr.province || addr.state || addr.city || addr.town || addr.village;
     return p ? p.replace('จังหวัด', '').replace('Province', '').trim() : '';
   };
@@ -135,7 +133,6 @@ export const MapPicker = ({ lat, lng, onPick, height = 280 }) => {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(search)}&addressdetails=1&limit=5`);
       const data = await res.json();
       setResults(data || []);
-      if (!data || data.length === 0) alert('ไม่พบสถานที่นี้ ลองระบุชื่อให้ชัดเจนขึ้นครับ');
     } catch (err) {
       console.error('Search failed:', err);
     } finally {
@@ -288,7 +285,70 @@ export const ToastMsg = ({ msg, type, onClose }) => {
   );
 };
 
+// Beautiful confirm dialog - replaces browser confirm()
+export const ConfirmDialog = ({ data, onConfirm, onCancel }) => {
+  if (!data) return null;
+  const isDanger = data.type === 'danger';
+  const isInfo = data.type === 'info';
+
+  const IconComp = isDanger ? AlertTriangle : isInfo ? Info : AlertTriangle;
+  const iconColor = isDanger ? '#FF6B6B' : isInfo ? 'var(--gold)' : '#FF6B6B';
+  const confirmBtnStyle = isDanger
+    ? { background: 'rgba(255,107,107,.15)', color: '#FF6B6B', border: '1px solid rgba(255,107,107,.3)' }
+    : { background: 'linear-gradient(135deg, var(--gold), var(--gold-dim))', color: '#07070F', border: 'none' };
+
+  return (
+    <div className="confirm-dialog-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
+      <div className="confirm-dialog-box">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+          <div style={{ 
+            width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+            background: isDanger ? 'rgba(255,107,107,.1)' : 'rgba(232,160,32,.1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <IconComp size={22} color={iconColor} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--text)', marginBottom: 4 }}>
+              {isDanger ? 'ยืนยันการดำเนินการ' : 'แจ้งเตือน'}
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.5 }}>{data.msg}</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onCancel}
+            className="btn-ghost"
+            style={{ padding: '9px 24px', borderRadius: 10, fontSize: 13, fontWeight: 500 }}
+          >
+            ยกเลิก
+          </button>
+          <button
+            onClick={() => { onConfirm(); onCancel(); }}
+            style={{ ...confirmBtnStyle, padding: '9px 24px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all .2s' }}
+          >
+            {isDanger ? 'ยืนยัน' : 'ตกลง'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Modal = ({ open, onClose, title, children }) => {
+  // Lock body scroll when modal open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+      // Scroll modal content to top when opened
+      const box = document.querySelector('.modal-box');
+      if (box) box.scrollTop = 0;
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
   if (!open) return null;
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>

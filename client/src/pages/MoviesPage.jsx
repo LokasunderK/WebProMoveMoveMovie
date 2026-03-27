@@ -33,48 +33,46 @@ const MoviesPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '100px 24px 60px' }}>
-      <form onSubmit={handleSearch} style={{ position: 'relative', maxWidth: 600, margin: '0 0 40px' }}>
+    <div className="max-w-[1200px] mx-auto pt-[100px] pb-[60px] px-6">
+      <form onSubmit={handleSearch} className="relative max-w-[600px] mb-10">
         <input
           type="text"
           placeholder="ค้นหาชื่อภาพยนตร์..."
           value={q} onChange={e => setQ(e.target.value)}
-          className="inp"
-          style={{ padding: '16px 24px', paddingLeft: 54, borderRadius: 30, fontSize: 16 }}
+          className="w-full py-4 px-6 pl-[54px] bg-white/5 border border-white/10 rounded-[30px] text-main text-[16px] outline-none transition-all duration-200 focus:border-gold/50 focus:shadow-[0_0_0_4px_rgba(232,160,32,0.12)] placeholder:text-muted"
         />
-        <Search size={22} color="var(--muted)" style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)' }} />
+        <Search size={22} className="text-muted absolute left-5 top-1/2 -translate-y-1/2" />
       </form>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-        <h2 className="font-serif" style={{ fontSize: 32, margin: 0 }}>ภาพยนตร์<span className="gold-text">ทั้งหมด</span></h2>
+      <div className="flex items-center gap-3 mb-7">
+        <h2 className="font-serif text-[32px] m-0">ภาพยนตร์<span className="gold-text">ทั้งหมด</span></h2>
         <span className="badge badge-gray">{movies.length} เรื่อง</span>
       </div>
 
-      <div className="movie-grid">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-5 max-md:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] max-md:gap-3.5 2xl:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
         {loading ? (
           [1, 2, 3, 4, 5, 6].map(i => <MovieCardSkeleton key={i} />)
         ) : movies.length > 0 ? (
           movies.map(m => (
-            <div key={m.id} className="card-hover d2" onClick={() => navigate(`/movies/${m.id}`)}
-              style={{ cursor: 'pointer', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 16, overflow: 'hidden' }}>
-              <div style={{ height: 280, position: 'relative' }}>
-                <img src={m.poster} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 50%, rgba(7,7,15,.9))' }} />
-                <div style={{ position: 'absolute', bottom: 12, left: 14 }}>
-                  <span style={{ background: 'rgba(232,160,32,.9)', color: '#07070F', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>★ 4.8</span>
+            <div key={m.id} className="card-hover delay-200 rounded-2xl" onClick={() => navigate(`/movies/${m.id}`)}>
+              <div className="pt-[140%] relative">
+                <img src={m.poster} alt={m.title} className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[rgba(7,7,15,0.9)] via-transparent to-transparent opacity-80" />
+                <div className="absolute bottom-3 left-3.5">
+                  <span className="bg-gold/90 text-[#07070F] px-[8px] py-[2px] rounded-md text-[11px] font-bold">★ 4.8</span>
                 </div>
               </div>
-              <div style={{ padding: '14px 15px' }}>
-                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
-                <div style={{ color: 'var(--muted)', fontSize: 13 }}>{m.releaseYear} • {m.genre || 'ทั่วไป'}</div>
+              <div className="px-3.5 py-3.5">
+                <div className="font-semibold text-[15px] mb-1 truncate">{m.title}</div>
+                <div className="text-muted text-[13px]">{m.releaseYear} • {m.genre || 'ทั่วไป'}</div>
               </div>
             </div>
           ))
         ) : (
-          <div style={{ gridColumn: '1 / -1', padding: '60px 20px', textAlign: 'center', background: 'var(--bg-card)', borderRadius: 16, border: '1px dashed rgba(255,255,255,.1)' }}>
-            <Popcorn size={48} color="rgba(255,255,255,.1)" style={{ margin: '0 auto 16px' }} />
-            <div style={{ fontSize: 18, color: 'var(--text)', marginBottom: 8 }}>ไม่พบภาพยนตร์ที่ค้นหา</div>
-            <div style={{ color: 'var(--muted)', fontSize: 14 }}>ลองใช้คำค้นหาอื่นดูสิ!</div>
+          <div className="col-span-full py-[60px] px-5 text-center bg-card rounded-2xl border border-dashed border-white/10">
+            <Popcorn size={48} className="text-white/10 mx-auto mb-4" />
+            <div className="text-[18px] text-main mb-2">ไม่พบภาพยนตร์ที่ค้นหา</div>
+            <div className="text-muted text-[14px]">ลองใช้คำค้นหาอื่นดูสิ!</div>
           </div>
         )}
       </div>

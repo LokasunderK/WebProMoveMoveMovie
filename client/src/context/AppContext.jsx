@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const AppContext = createContext();
@@ -7,12 +7,12 @@ export const useAppContext = () => useContext(AppContext);
 
 export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    // Try to restore from localStorage on first load
     const saved = localStorage.getItem('mmm_user');
     return saved ? JSON.parse(saved) : null;
   });
   
   const [toastData, setToastData] = useState(null);
+  const [confirmData, setConfirmData] = useState(null); // { msg, onConfirm, onCancel, type }
   const navigate = useNavigate();
 
   const login = useCallback((userData) => {
@@ -30,8 +30,22 @@ export const AppProvider = ({ children }) => {
     setToastData({ msg, type, key: Date.now() });
   }, []);
 
+  // Beautiful confirm dialog (replaces browser confirm())
+  const confirm = useCallback((msg, onConfirm, type = 'danger') => {
+    setConfirmData({ msg, onConfirm, type });
+  }, []);
+
+  // Admin: login as another user (impersonate)
+  const impersonate = useCallback((targetUser) => {
+    setUser(targetUser);
+    localStorage.setItem('mmm_user', JSON.stringify(targetUser));
+  }, []);
+
   return (
-    <AppContext.Provider value={{ user, login, logout, toast, toastData, setToastData }}>
+    <AppContext.Provider value={{ 
+      user, login, logout, toast, toastData, setToastData, 
+      confirm, confirmData, setConfirmData, impersonate 
+    }}>
       {children}
     </AppContext.Provider>
   );

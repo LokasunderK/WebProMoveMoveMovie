@@ -11,34 +11,36 @@ const ProfilePage = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div style={{ maxWidth: 800, margin: '140px auto 100px', padding: '0 24px' }}>
-      <div className="animate-fadeUp">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 40, borderBottom: '1px solid rgba(255,255,255,.08)', paddingBottom: 40 }}>
-          <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'linear-gradient(135deg, var(--gold), var(--gold-dim))', color: '#07070F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, fontWeight: 700, flexShrink: 0 }}>
+    <div className="max-w-[800px] mx-auto mt-[140px] mb-[100px] px-6">
+      <div className="animate-fade-up">
+        
+        <div className="flex items-center gap-6 mb-10 pb-10 border-b border-white/10 max-md:flex-col max-md:text-center max-md:gap-4 max-md:pb-6">
+          <div className="w-[100px] h-[100px] rounded-full bg-gradient-to-br from-gold to-gold-dim text-[#07070F] flex items-center justify-center text-[40px] font-bold shrink-0">
             {user?.name?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-              <h1 className="font-serif" style={{ fontSize: 32, margin: 0 }}>{user.name}</h1>
+            <div className="flex items-center gap-3 mb-1.5 max-md:justify-center">
+              <h1 className="font-serif text-[32px] m-0">{user.name}</h1>
               <span className="badge badge-gray">{user.role}</span>
             </div>
-            <div style={{ color: 'var(--muted)', fontSize: 16, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <div className="text-muted text-[16px] flex items-center gap-1.5 mb-3 max-md:justify-center">
               <User size={16} /> {user.email}
             </div>
-            <div style={{ background: 'rgba(232,160,32,.1)', border: '1px solid rgba(232,160,32,.2)', borderRadius: 20, padding: '4px 16px', display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--gold)', fontWeight: 600 }}>
-              <Star size={16} fill="var(--gold)" /> แต้มสะสม: {pts} แต้ม
+            <div className="bg-gold/10 border border-gold/20 rounded-[20px] px-4 py-1 inline-flex items-center gap-2 text-gold font-semibold max-md:mx-auto">
+              <Star size={16} className="fill-gold" /> แต้มสะสม: {pts} แต้ม
             </div>
           </div>
         </div>
 
-        <h2 className="font-serif" style={{ fontSize: 24, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Clock size={24} color="var(--gold)" /> กิจกรรมล่าสุด
+        <h2 className="font-serif text-[24px] mb-5 flex items-center gap-2 max-md:justify-center">
+          <Clock size={24} className="text-gold" /> กิจกรรมล่าสุด
         </h2>
-        <div style={{ background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 16, padding: '32px', textAlign: 'center' }}>
-          <Gift size={48} color="rgba(255,255,255,.1)" style={{ margin: '0 auto 16px' }} />
-          <div style={{ fontSize: 16, color: 'var(--muted)', marginBottom: 4 }}>ยังไม่มีประวัติการแลกของรางวัล หรือเขียนรีวิว</div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,.2)' }}>สะสมแต้มจากการแชร์ประสบการณ์ แล้วนำมาแลกรางวัลได้เลย!</div>
+        <div className="bg-card border border-white/5 rounded-2xl p-8 text-center">
+          <Gift size={48} className="text-white/10 mx-auto mb-4" />
+          <div className="text-[16px] text-muted mb-1">ยังไม่มีประวัติการแลกของรางวัล หรือเขียนรีวิว</div>
+          <div className="text-[14px] text-white/20">สะสมแต้มจากการแชร์ประสบการณ์ แล้วนำมาแลกรางวัลได้เลย!</div>
         </div>
+        
       </div>
     </div>
   );

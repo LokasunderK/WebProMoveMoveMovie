@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Trash2, Edit2, Plus, Users, Film, MapPin, LayoutDashboard, Megaphone } from 'lucide-react';
+import { Eye, EyeOff, Trash2, Edit2, Plus, Users, Film, MapPin, LayoutDashboard, Megaphone, LogIn, Shield } from 'lucide-react';
 import { Modal, Field, MapPicker } from '../components/UI';
 import { useAppContext } from '../context/AppContext';
-import { UserDB, MovieController, LocationController, AdController } from '../services/db';
-import { Navigate } from 'react-router-dom';
+import { UserDB, MovieController, LocationController, AdController, supabase } from '../services/db';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 const AdminPage = () => {
-  const { user, toast } = useAppContext();
+  const { user, toast, confirm, impersonate } = useAppContext();
+  const navigate = useNavigate();
   const [tab, setTab] = useState('movies');
-  const [updater, setUpdater] = useState(0); // to force re-render
+  const [updater, setUpdater] = useState(0);
 
   const [modalType, setModalType] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({});
+
+  // User edit modal
+  const [userModal, setUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({});
 
   if (!user || user.role !== 'admin') {
     return <Navigate to="/auth" />;
@@ -34,11 +40,11 @@ const AdminPage = () => {
   };
 
   const handleDelete = (id, controller, typeName) => {
-    if (confirm(`ยืนยันการลบ${typeName}?`)) {
-      controller.delete(id);
+    confirm(`ยืนยันการลบ${typeName} ID: ${id} ออกจากระบบ?`, async () => {
+      await controller.delete(id);
       toast(`ลบ${typeName}เรียบร้อย`);
       refresh();
-    }
+    });
   };
 
   const handleToggleVis = (id, controller) => {
@@ -65,137 +71,228 @@ const AdminPage = () => {
     }
   };
 
-  // --- Data rendering helpers ---
+  // --- User management ---
+  const handleEditUser = (u) => {
+    setEditingUser(u);
+    setUserForm({ name: u.name, email: u.email, role: u.role, password: '' });
+    setUserModal(true);
+  };
+
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    try {
+      const updates = { name: userForm.name, email: userForm.email, role: userForm.role };
+      if (userForm.password) updates.password = userForm.password;
+      
+      const { data, error } = await supabase.from('users').update(updates).eq('id', editingUser.id).select().single();
+      if (error) throw error;
+      
+      const users = UserDB.list();
+      const idx = users.findIndex(u => u.id === editingUser.id);
+      if (idx !== -1) Object.assign(users[idx], data);
+      
+      toast('แก้ไขข้อมูลผู้ใช้สำเร็จ');
+      setUserModal(false);
+      refresh();
+    } catch (err) {
+      toast(err.message || 'แก้ไขข้อมูลไม่สำเร็จ', 'error');
+    }
+  };
+
+  const handleDeleteUser = (u) => {
+    if (u.id === user.id) return toast('ไม่สามารถลบบัญชีตัวเองได้', 'error');
+    confirm(`ยืนยันการลบบัญชี "${u.name}" (${u.email})?\nการกระทำนี้ไม่สามารถย้อนกลับได้`, async () => {
+      const { error } = await supabase.from('users').delete().eq('id', u.id);
+      if (error) return toast(error.message, 'error');
+      const list = UserDB.list();
+      const idx = list.findIndex(x => x.id === u.id);
+      if (idx !== -1) list.splice(idx, 1);
+      toast(`ลบบัญชี ${u.name} สำเร็จ`);
+      refresh();
+    });
+  };
+
+  const handleImpersonate = (targetUser) => {
+    confirm(`เข้าสู่ระบบแทน "${targetUser.name}" (${targetUser.email})?\nบทบาท: ${targetUser.role}`, () => {
+      impersonate(targetUser);
+      toast(`เข้าสู่ระบบแทน ${targetUser.name} สำเร็จ`);
+      navigate('/');
+    }, 'info');
+  };
+
   const movies = MovieController.list();
   const locations = LocationController.list();
   const ads = AdController.list();
   const users = UserDB.list();
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '100px 24px 64px' }}>
-      <div className="animate-fadeUp">
-        <h1 className="font-serif" style={{ fontSize: 36, marginBottom: 32, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <LayoutDashboard size={32} color="var(--gold)" /> จัดการระบบ <span className="gold-text">(Admin)</span>
+    <div className="max-w-[1200px] mx-auto pt-[100px] pb-16 px-6">
+      <div className="animate-fade-up">
+        <h1 className="font-serif text-[36px] mb-8 flex items-center gap-3">
+          <LayoutDashboard size={32} className="text-gold" /> จัดการระบบ <span className="gold-text">(Admin)</span>
         </h1>
 
-        <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid rgba(255,255,255,.08)', paddingBottom: 16, marginBottom: 32, overflowX: 'auto' }}>
+        <div className="flex gap-2 border-b border-white/10 pb-4 mb-8 overflow-x-auto no-scrollbar">
           {[
             { id: 'movies', l: 'ภาพยนตร์', icon: Film },
             { id: 'locations', l: 'สถานที่', icon: MapPin },
             { id: 'ads', l: 'โฆษณา/โปรโมชั่น', icon: Megaphone },
             { id: 'users', l: 'ผู้ใช้งาน', icon: Users }
           ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`tab-item ${tab === t.id ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+            <button key={t.id} onClick={() => setTab(t.id)} 
+              className={`tab-item flex items-center gap-2 whitespace-nowrap min-w-max ${tab === t.id ? 'active' : ''}`}>
               <t.icon size={16} /> {t.l}
             </button>
           ))}
         </div>
 
-        {/* Tab Content */}
+        {/* MOVIES TAB */}
         {tab === 'movies' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-              <button onClick={() => handleCreate('movies')} className="btn-gold" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8 }}><Plus size={16} /> เพิ่มภาพยนตร์</button>
+            <div className="flex justify-end mb-4">
+              <button onClick={() => handleCreate('movies')} className="btn-gold flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm">
+                <Plus size={16} /> เพิ่มภาพยนตร์
+              </button>
             </div>
-            <table>
-              <thead><tr><th>ID</th><th>ชื่อเรื่อง</th><th>ปีที่ฉาย</th><th>หมวดหมู่</th><th>จัดการ</th></tr></thead>
-              <tbody>
-                {movies.map(m => (
-                  <tr key={m.id}>
-                    <td>{m.id}</td>
-                    <td>{m.title}</td>
-                    <td>{m.releaseYear}</td>
-                    <td>{m.genre}</td>
-                    <td>
-                      <button onClick={() => handleEdit(m, 'movies')} className="btn-ghost" style={{ padding: '6px', borderRadius: 6, marginRight: 8 }}><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(m.id, MovieController, 'ภาพยนตร์')} className="btn-danger" style={{ padding: '6px', borderRadius: 6 }}><Trash2 size={14} /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {tab === 'locations' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-              <button onClick={() => handleCreate('locations')} className="btn-gold" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8 }}><Plus size={16} /> เพิ่มสถานที่</button>
-            </div>
-            <table>
-              <thead><tr><th>ID</th><th>ชื่อสถานที่</th><th>จังหวัด</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
-              <tbody>
-                {locations.map(l => (
-                  <tr key={l.id}>
-                    <td>{l.id}</td>
-                    <td>{l.name}</td>
-                    <td>{l.province}</td>
-                    <td>{l.hidden ? <span style={{ color: 'var(--muted)' }}><EyeOff size={14} style={{ display: 'inline' }} /> ซ่อน</span> : <span style={{ color: 'var(--gold)' }}><Eye size={14} style={{ display: 'inline' }} /> แสดง</span>}</td>
-                    <td>
-                      <button onClick={() => handleToggleVis(l.id, LocationController)} className="btn-ghost" style={{ padding: '6px', borderRadius: 6, marginRight: 8 }}>{l.hidden ? <Eye size={14} /> : <EyeOff size={14} />}</button>
-                      <button onClick={() => handleEdit(l, 'locations')} className="btn-ghost" style={{ padding: '6px', borderRadius: 6, marginRight: 8 }}><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(l.id, LocationController, 'สถานที่')} className="btn-danger" style={{ padding: '6px', borderRadius: 6 }}><Trash2 size={14} /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {tab === 'ads' && (
-          <div>
-            <h3 className="font-serif" style={{ marginBottom: 16 }}>อนุมัติแคมเปญ & โฆษณาจาก Partner</h3>
-            <table>
-              <thead><tr><th>ID</th><th>หัวข้อ</th><th>ชื่อ Partner</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
-              <tbody>
-                {ads.map(a => {
-                  const partner = users.find(u => u.id === a.partnerId);
-                  return (
-                    <tr key={a.id}>
-                      <td>{a.id}</td>
-                      <td>{a.title}</td>
-                      <td>{partner ? partner.name : 'Unknown Partner'}</td>
+            <div className="overflow-x-auto">
+              <table>
+                <thead><tr><th>ID</th><th>ชื่อเรื่อง</th><th>ปีที่ฉาย</th><th>หมวดหมู่</th><th>จัดการ</th></tr></thead>
+                <tbody>
+                  {movies.map(m => (
+                    <tr key={m.id}>
+                      <td>{m.id}</td>
+                      <td>{m.title}</td>
+                      <td>{m.releaseYear}</td>
+                      <td>{m.genre}</td>
                       <td>
-                        {a.hidden ? 
-                          <span style={{ color: 'var(--muted)', background: 'rgba(255,255,255,.05)', padding: '2px 8px', borderRadius: 12, fontSize: 12 }}>รออนุมัติ / ซ่อน</span> : 
-                          <span style={{ color: '#4ADE80', background: 'rgba(74,222,128,.1)', padding: '2px 8px', borderRadius: 12, fontSize: 12 }}>อนุมัติแล้ว / แสดง</span>
-                        }
-                      </td>
-                      <td>
-                        <button onClick={() => handleToggleVis(a.id, AdController)} className="btn-ghost" style={{ padding: '6px 12px', borderRadius: 6, marginRight: 8, fontSize: 13, gap: 6, display: 'inline-flex', alignItems: 'center' }}>
-                          {a.hidden ? <Eye size={14} /> : <EyeOff size={14} />} 
-                          {a.hidden ? 'อนุมัติ (แสดงผล)' : 'ระงับ (ซ่อน)'}
-                        </button>
-                        <button onClick={() => handleDelete(a.id, AdController, 'โฆษณา')} className="btn-danger" style={{ padding: '6px', borderRadius: 6 }}><Trash2 size={14} /></button>
+                        <button onClick={() => handleEdit(m, 'movies')} className="btn-ghost p-1.5 rounded-md mr-2"><Edit2 size={14} /></button>
+                        <button onClick={() => handleDelete(m.id, MovieController, 'ภาพยนตร์')} className="btn-danger p-1.5 rounded-md"><Trash2 size={14} /></button>
                       </td>
                     </tr>
-                )})}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {tab === 'users' && (
-          <table>
-            <thead><tr><th>ID</th><th>ชื่อ</th><th>อีเมล</th><th>บทบาท</th><th>วันที่สมัคร</th></tr></thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u.id}>
-                  <td>{u.id}</td>
-                  <td>{u.name}</td>
-                  <td>{u.email}</td>
-                  <td><span className={u.role === 'admin' ? 'badge badge-green' : u.role === 'partner' ? 'badge' : 'badge badge-gray'}>{u.role}</span></td>
-                  <td>{new Date(u.createdAt).toLocaleDateString('th-TH')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* LOCATIONS TAB */}
+        {tab === 'locations' && (
+          <div>
+            <div className="flex justify-end mb-4">
+              <button onClick={() => handleCreate('locations')} className="btn-gold flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm">
+                <Plus size={16} /> เพิ่มสถานที่
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table>
+                <thead><tr><th>ID</th><th>ชื่อสถานที่</th><th>จังหวัด</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+                <tbody>
+                  {locations.map(l => (
+                    <tr key={l.id}>
+                      <td>{l.id}</td>
+                      <td>{l.name}</td>
+                      <td>{l.province}</td>
+                      <td>{l.hidden ? <span className="text-muted"><EyeOff size={14} className="inline mr-1" /> ซ่อน</span> : <span className="text-gold"><Eye size={14} className="inline mr-1" /> แสดง</span>}</td>
+                      <td>
+                        <button onClick={() => handleToggleVis(l.id, LocationController)} className="btn-ghost p-1.5 rounded-md mr-2">{l.hidden ? <Eye size={14} /> : <EyeOff size={14} />}</button>
+                        <button onClick={() => handleEdit(l, 'locations')} className="btn-ghost p-1.5 rounded-md mr-2"><Edit2 size={14} /></button>
+                        <button onClick={() => handleDelete(l.id, LocationController, 'สถานที่')} className="btn-danger p-1.5 rounded-md"><Trash2 size={14} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
+        {/* ADS TAB */}
+        {tab === 'ads' && (
+          <div>
+            <h3 className="font-serif mb-4 text-[20px]">อนุมัติแคมเปญ &amp; โฆษณาจาก Partner</h3>
+            <div className="overflow-x-auto">
+              <table>
+                <thead><tr><th>ID</th><th>หัวข้อ</th><th>ชื่อ Partner</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+                <tbody>
+                  {ads.map(a => {
+                    const partner = users.find(u => u.id === a.partnerId);
+                    return (
+                      <tr key={a.id}>
+                        <td>{a.id}</td>
+                        <td>{a.title}</td>
+                        <td>{partner ? partner.name : 'Unknown Partner'}</td>
+                        <td>
+                          {a.hidden ? 
+                            <span className="text-muted bg-white/5 px-2 py-0.5 rounded-full text-xs">รออนุมัติ / ซ่อน</span> : 
+                            <span className="text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full text-xs">อนุมัติแล้ว / แสดง</span>
+                          }
+                        </td>
+                        <td>
+                          <button onClick={() => handleToggleVis(a.id, AdController)} className="btn-ghost py-1.5 px-3 rounded-md mr-2 text-[13px] inline-flex items-center gap-1.5">
+                            {a.hidden ? <Eye size={14} /> : <EyeOff size={14} />} 
+                            {a.hidden ? 'อนุมัติ (แสดงผล)' : 'ระงับ (ซ่อน)'}
+                          </button>
+                          <button onClick={() => handleDelete(a.id, AdController, 'โฆษณา')} className="btn-danger p-1.5 rounded-md"><Trash2 size={14} /></button>
+                        </td>
+                      </tr>
+                  )})}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* USERS TAB */}
+        {tab === 'users' && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-muted text-[13px]">
+                รวม {users.length} บัญชี · สามารถแก้ไขข้อมูลและเข้าสู่ระบบแทนได้
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table>
+                <thead><tr><th>ID</th><th>ชื่อ</th><th>อีเมล</th><th>บทบาท</th><th>วันที่สมัคร</th><th>จัดการ</th></tr></thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id}>
+                      <td className="text-muted text-[12px]">{u.id}</td>
+                      <td className="font-medium">{u.name}</td>
+                      <td className="text-muted">{u.email}</td>
+                      <td><span className={u.role === 'admin' ? 'badge badge-green' : u.role === 'partner' ? 'badge' : 'badge badge-gray'}>{u.role}</span></td>
+                      <td className="text-muted text-[12px]">{u.createdAt ? new Date(u.createdAt).toLocaleDateString('th-TH') : '-'}</td>
+                      <td>
+                        <div className="flex gap-1.5 flex-wrap">
+                          <button onClick={() => handleEditUser(u)} className="btn-ghost px-2.5 py-1 rounded-md text-[12px] flex items-center gap-1" title="แก้ไขข้อมูล">
+                            <Edit2 size={13} /> แก้ไข
+                          </button>
+                          {u.id !== user.id && (
+                            <button onClick={() => handleImpersonate(u)} className="btn-ghost px-2.5 py-1 rounded-md text-[12px] flex items-center gap-1 border-gold/30 text-gold" title="เข้าสู่ระบบแทน">
+                              <LogIn size={13} /> Login แทน
+                            </button>
+                          )}
+                          {u.id !== user.id && u.role !== 'admin' && (
+                            <button onClick={() => handleDeleteUser(u)} className="btn-danger p-1 rounded-md" title="ลบบัญชี">
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                          {u.id === user.id && (
+                            <span className="text-muted text-[11px] px-2 py-1 flex items-center gap-1">
+                              <Shield size={12} />คุณ
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Edit/Create Modal */}
       <Modal open={!!modalType} onClose={() => setModalType(null)} title={editingItem ? 'แก้ไขข้อมูล' : 'เพิ่มข้อมูลใหม่'}>
         <form onSubmit={handleSubmit}>
           {modalType === 'movies' && (
@@ -218,26 +315,46 @@ const AdminPage = () => {
                 lat={formData.lat} 
                 lng={formData.lng} 
                 onPick={(lat, lng, province) => {
-                  setFormData(prev => ({ 
-                    ...prev, 
-                    lat, 
-                    lng, 
-                    province: province || prev.province 
-                  }));
+                  setFormData(prev => ({ ...prev, lat, lng, province: province || prev.province }));
                 }} 
               />
 
-              <div style={{ display: 'flex', gap: 16 }}>
+              <div className="flex gap-4 max-md:flex-col mt-4">
                 <Field label="ละติจูด (Lat)"><input type="number" step="0.0001" required value={formData.lat || ''} onChange={e => setFormData({ ...formData, lat: parseFloat(e.target.value) })} className="inp" /></Field>
                 <Field label="ลองจิจูด (Lng)"><input type="number" step="0.0001" required value={formData.lng || ''} onChange={e => setFormData({ ...formData, lng: parseFloat(e.target.value) })} className="inp" /></Field>
               </div>
-              <Field label="รายละเอียด"><textarea required value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="inp" /></Field>
+              <Field label="รายละเอียด"><textarea required value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="inp min-h-[80px]" /></Field>
             </>
           )}
 
-          <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-            <button type="button" onClick={() => setModalType(null)} className="btn-ghost" style={{ flex: 1, padding: '12px 0', borderRadius: 10 }}>ยกเลิก</button>
-            <button type="submit" className="btn-gold" style={{ flex: 1, padding: '12px 0', borderRadius: 10 }}>บันทึกข้อมูล</button>
+          <div className="flex gap-3 mt-6">
+            <button type="button" onClick={() => setModalType(null)} className="btn-ghost flex-1 py-3 rounded-xl">ยกเลิก</button>
+            <button type="submit" className="btn-gold flex-1 py-3 rounded-xl">บันทึกข้อมูล</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={userModal} onClose={() => setUserModal(false)} title={`แก้ไขข้อมูลผู้ใช้: ${editingUser?.name}`}>
+        <form onSubmit={handleSaveUser}>
+          <Field label="ชื่อ-นามสกุล">
+            <input required value={userForm.name || ''} onChange={e => setUserForm({ ...userForm, name: e.target.value })} className="inp" />
+          </Field>
+          <Field label="อีเมล">
+            <input type="email" required value={userForm.email || ''} onChange={e => setUserForm({ ...userForm, email: e.target.value })} className="inp" />
+          </Field>
+          <Field label="บทบาท (Role)">
+            <select value={userForm.role || 'member'} onChange={e => setUserForm({ ...userForm, role: e.target.value })} className="inp px-3">
+              <option value="member">member</option>
+              <option value="partner">partner</option>
+              <option value="admin">admin</option>
+            </select>
+          </Field>
+          <Field label="รหัสผ่านใหม่ (เว้นว่างถ้าไม่ต้องการเปลี่ยน)">
+            <input type="password" value={userForm.password || ''} onChange={e => setUserForm({ ...userForm, password: e.target.value })} className="inp" placeholder="••••••••" />
+          </Field>
+          <div className="flex gap-3 mt-6">
+            <button type="button" onClick={() => setUserModal(false)} className="btn-ghost flex-1 py-3 rounded-xl">ยกเลิก</button>
+            <button type="submit" className="btn-gold flex-1 py-3 rounded-xl">บันทึกการเปลี่ยนแปลง</button>
           </div>
         </form>
       </Modal>
