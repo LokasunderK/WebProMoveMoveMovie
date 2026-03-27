@@ -13,7 +13,7 @@ const PartnerPage = () => {
   const [formData, setFormData] = useState({});
 
   if (!user || user.role !== 'partner') {
-    return <div style={{ textAlign: 'center', padding: '120px 24px' }}><h3>ไม่มีสิทธิ์เข้าถึงหน้านี้ เฉพาะ Partner เท่านั้น</h3></div>;
+    return <div style={{ textAlign: 'center', padding: '120px 24px', color: '#7A7990' }}><h3 className="font-serif">ไม่มีสิทธิ์เข้าถึงหน้านี้ เฉพาะ Partner เท่านั้น</h3></div>;
   }
 
   const refresh = () => setUpdater(x => x + 1);
@@ -63,11 +63,11 @@ const PartnerPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '100px 24px 64px' }}>
+    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '110px 24px 80px' }}>
       <div className="animate-fadeUp">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-          <h1 className="font-serif" style={{ fontSize: 32, margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Megaphone size={32} color="var(--gold)" /> เสนอโฆษณา <span className="gold-text">(Partner)</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 40 }}>
+          <h1 className="font-serif" style={{ fontSize: 'clamp(28px, 4vw, 36px)', margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Megaphone size={36} color="#E8A020" /> เสนอโฆษณา <span className="gold-text">(Partner)</span>
           </h1>
           <button onClick={handleCreate} className="btn-gold" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 10 }}>
             <Plus size={16} /> สร้างแคมเปญใหม่
@@ -75,33 +75,33 @@ const PartnerPage = () => {
         </div>
 
         {myAds.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
             {myAds.map(a => (
-              <div key={a.id} style={{ background: 'var(--bg-card)', border: `1px solid ${a.hidden ? 'rgba(255,107,107,.2)' : 'rgba(74,222,128,.2)'}`, borderRadius: 16, padding: '24px' }}>
+              <div key={a.id} style={{ background: '#0D0D1A', border: `1px solid ${a.hidden ? 'rgba(255,107,107,.25)' : 'rgba(74,222,128,.25)'}`, borderRadius: 16, padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                   <span className={`badge ${a.hidden ? 'badge-red' : 'badge-green'}`}>
                     {a.hidden ? 'ระงับ/รออนุมัติ' : 'เผยแพร่แล้ว'}
                   </span>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => handleToggleVis(a.id)} className="btn-ghost" style={{ padding: '6px', borderRadius: 6 }} title={a.hidden ? 'ขอเผยแพร่' : 'ร้องขอซ่อน'}>
-                      {a.hidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                    <button onClick={() => handleToggleVis(a.id)} className="btn-ghost" style={{ padding: '6px', borderRadius: 8 }} title={a.hidden ? 'ขอเผยแพร่' : 'ร้องขอซ่อน'}>
+                      {a.hidden ? <Eye size={15} /> : <EyeOff size={15} />}
                     </button>
-                    <button onClick={() => handleEdit(a)} className="btn-ghost" style={{ padding: '6px', borderRadius: 6 }}><Edit2 size={14} /></button>
-                    <button onClick={() => handleDelete(a.id)} className="btn-danger" style={{ padding: '6px', borderRadius: 6 }}><Trash2 size={14} /></button>
+                    <button onClick={() => handleEdit(a)} className="btn-ghost" style={{ padding: '6px', borderRadius: 8 }}><Edit2 size={15} /></button>
+                    <button onClick={() => handleDelete(a.id)} className="btn-danger" style={{ padding: '6px', borderRadius: 8 }}><Trash2 size={15} /></button>
                   </div>
                 </div>
                 
-                <h3 className="font-serif" style={{ fontSize: 18, marginBottom: 8, color: 'var(--text)' }}>{a.title}</h3>
-                <p style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{a.description}</p>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.2)' }}>เพิ่มเมื่อ: {new Date(a.createdAt).toLocaleDateString('th-TH')}</div>
+                <h3 className="font-serif" style={{ fontSize: 20, marginBottom: 8, color: '#EDE9E3' }}>{a.title}</h3>
+                <p style={{ color: '#7A7990', fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>{a.description}</p>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>เพิ่มเมื่อ: {new Date(a.createdAt).toLocaleDateString('th-TH')}</div>
               </div>
             ))}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--bg-card)', borderRadius: 16, border: '1px dashed rgba(255,255,255,.1)' }}>
-            <Megaphone size={40} color="var(--muted)" style={{ margin: '0 auto 16px' }} />
-            <div style={{ color: 'var(--text)', fontSize: 16, marginBottom: 8 }}>ยังไม่มีแคมเปญโฆษณา</div>
-            <div style={{ color: 'var(--muted)', fontSize: 14 }}>สร้างโฆษณาแรกของคุณเพื่อโปรโมทสถานที่ใกล้เคียงการถ่ายทำได้เลย</div>
+          <div style={{ textAlign: 'center', padding: '60px 24px', background: '#0D0D1A', borderRadius: 16, border: '1px dashed rgba(255,255,255,.1)' }}>
+            <Megaphone size={40} color="#7A7990" style={{ margin: '0 auto 16px' }} />
+            <div style={{ color: '#EDE9E3', fontSize: 16, marginBottom: 8 }}>ยังไม่มีแคมเปญโฆษณา</div>
+            <div style={{ color: '#7A7990', fontSize: 14 }}>สร้างโฆษณาแรกของคุณเพื่อโปรโมทสถานที่ใกล้เคียงการถ่ายทำได้เลย</div>
           </div>
         )}
       </div>

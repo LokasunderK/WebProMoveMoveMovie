@@ -27,9 +27,9 @@ function App() {
 
   if (!dbReady) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#07070F' }}>
-        <h2 className="font-serif gold-text" style={{ fontSize: 32, marginBottom: 20 }}>Move³Movie</h2>
-        <Shimmer w={200} h={4} style={{ borderRadius: 4 }} />
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#FEF5E7' }}>
+        <h2 className="font-serif gold-text" style={{ fontSize: 32, marginBottom: 20 }}>Movie²Movies</h2>
+        <Shimmer w={200} h={4} style={{ borderRadius: 4, background: '#E6A275' }} />
       </div>
     );
   }
