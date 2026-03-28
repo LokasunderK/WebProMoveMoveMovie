@@ -258,7 +258,7 @@ export const MapPicker = ({ lat, lng, onPick, height = 280 }) => {
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 2 }}>{r.display_name.split(',')[0]}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.display_name}</div>
+                <div style={{ fontSize: 11, color: 'var(--color-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.display_name}</div>
               </div>
             ))}
           </div>
@@ -266,7 +266,7 @@ export const MapPicker = ({ lat, lng, onPick, height = 280 }) => {
       </div>
       
       <div ref={pickerMapRef} style={{ height, borderRadius: 12, border: '1px solid rgba(255,255,255,.1)', marginBottom: 8, cursor: 'crosshair' }} />
-      <div style={{ fontSize: 11, color: 'var(--gold)', textAlign: 'center', opacity: 0.8 }}>
+      <div style={{ fontSize: 11, color: 'var(--color-gold)', textAlign: 'center', opacity: 0.8 }}>
          👆 เลือกผลการค้นหา หรือคลิกบนแผนที่เพื่อระบุจังหวัดอัตโนมัติ
       </div>
     </div>
@@ -304,10 +304,10 @@ export const ConfirmDialog = ({ data, onConfirm, onCancel }) => {
   const isInfo = data.type === 'info';
 
   const IconComp = isDanger ? AlertTriangle : isInfo ? Info : AlertTriangle;
-  const iconColor = isDanger ? '#FF6B6B' : isInfo ? 'var(--gold)' : '#FF6B6B';
+  const iconColor = isDanger ? '#FF6B6B' : isInfo ? 'var(--color-gold)' : '#FF6B6B';
   const confirmBtnStyle = isDanger
     ? { background: 'rgba(255,107,107,.15)', color: '#FF6B6B', border: '1px solid rgba(255,107,107,.3)' }
-    : { background: 'linear-gradient(135deg, var(--gold), var(--gold-dim))', color: '#07070F', border: 'none' };
+    : { background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dim))', color: '#07070F', border: 'none' };
 
   return (
     <div className="confirm-dialog-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
@@ -321,10 +321,10 @@ export const ConfirmDialog = ({ data, onConfirm, onCancel }) => {
             <IconComp size={22} color={iconColor} />
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--text)', marginBottom: 4 }}>
+            <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--color-main)', marginBottom: 4 }}>
               {isDanger ? 'ยืนยันการดำเนินการ' : 'แจ้งเตือน'}
             </div>
-            <div style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.5 }}>{data.msg}</div>
+            <div style={{ color: 'var(--color-muted)', fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{data.msg}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
@@ -366,7 +366,7 @@ export const Modal = ({ open, onClose, title, children }) => {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-box">
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
-          <h3 className="font-serif" style={{ fontSize:20, color:'var(--text)' }}>{title}</h3>
+          <h3 className="font-serif" style={{ fontSize:20, color:'var(--color-main)' }}>{title}</h3>
           <button onClick={onClose} className="btn-ghost" style={{ borderRadius:8, width:32, height:32, fontSize:16 }}>✕</button>
         </div>
         {children}
@@ -393,7 +393,7 @@ export const Stars = ({ val = 0, onChange, size = 20, readonly = false }) => {
 };
 
 export const Label = ({ children }) => (
-  <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:6 }}>{children}</label>
+  <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--color-muted)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:6 }}>{children}</label>
 );
 
 export const Field = ({ label, children }) => (
