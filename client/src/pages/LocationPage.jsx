@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Tag, MessagesSquare, Map, Star, Compass } from 'lucide-react';
+import { ArrowLeft, MapPin, Tag, MessagesSquare, Map, Star, Compass, CheckCircle } from 'lucide-react';
 import { Shimmer, LeafletMap, Stars, Field } from '../components/UI';
 import { useAppContext } from '../context/AppContext';
-import { LocationController, AdController, ReviewController, MovieController } from '../services/db';
+import { LocationController, AdController, ReviewController, MovieController, PointController } from '../services/db';
 
 const LocationPage = () => {
   const { id } = useParams();
@@ -15,6 +15,10 @@ const LocationPage = () => {
   const [reviews, setReviews] = useState([]);
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Check-in states
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [hasCheckedIn, setHasCheckedIn] = useState(false);
 
   // Form states
   const [reviewText, setReviewText] = useState('');
@@ -55,6 +59,56 @@ const LocationPage = () => {
     } catch (err) {
       toast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     }
+  };
+
+  const handleCheckIn = () => {
+    if (!user) return toast('กรุณาเข้าสู่ระบบเพื่อเช็คอิน', 'error');
+    if (hasCheckedIn) return toast('คุณได้เช็คอินสถานที่นี้ไปแล้ว', 'error');
+
+    if (!navigator.geolocation) {
+      return toast('เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง', 'error');
+    }
+
+    setIsCheckingIn(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        
+        // Calculate distance via Haversine formula
+        const R = 6371; // Earth's radius in km
+        const dLat = (loc.lat - userLat) * (Math.PI / 180);
+        const dLng = (loc.lng - userLng) * (Math.PI / 180);
+        const a = 
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(userLat * (Math.PI / 180)) * Math.cos(loc.lat * (Math.PI / 180)) * 
+          Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c; // Distance in km
+
+        if (distance <= 5) {
+          try {
+            await PointController.add(user.id, 500);
+            toast('เช็คอินสำเร็จ! คุณได้รับ 500 แต้ม', 'success');
+            setHasCheckedIn(true);
+          } catch (err) {
+            toast('เกิดข้อผิดพลาดในการเพิ่มแต้ม: ' + err.message, 'error');
+          }
+        } else {
+          toast(`คุณอยู่ห่างจากสถานที่เกินไป (${distance.toFixed(1)} กม. / กำหนด 5 กม.)`, 'error');
+        }
+        setIsCheckingIn(false);
+      },
+      (error) => {
+        let errorMsg = 'เกิดข้อผิดพลาดในการดึงตำแหน่ง';
+        if (error.code === 1) errorMsg = 'คุณไม่อนุญาตให้เข้าถึงตำแหน่งที่ตั้ง';
+        else if (error.code === 2) errorMsg = 'ไม่สามารถระบุตำแหน่งของคุณได้';
+        else if (error.code === 3) errorMsg = 'หมดเวลาในการดึงตำแหน่ง';
+        toast(errorMsg, 'error');
+        setIsCheckingIn(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   if (loading) {
@@ -105,7 +159,7 @@ const LocationPage = () => {
             {loc.lat && loc.lng && (
               <div className="mb-10">
                 <LeafletMap locations={[loc]} center={[loc.lat, loc.lng]} zoom={15} height={300} />
-                <div className="mt-4">
+                <div className="mt-4 flex flex-wrap gap-4">
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`}
                     target="_blank"
@@ -114,6 +168,24 @@ const LocationPage = () => {
                   >
                     <Map size={18} /> นำทางด้วย Google Maps
                   </a>
+                  
+                  <button 
+                    onClick={handleCheckIn}
+                    disabled={isCheckingIn || hasCheckedIn}
+                    className={`inline-flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-[15px] transition-all 
+                                ${hasCheckedIn 
+                                  ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                  : 'bg-[#1a1b26] text-white hover:bg-[#252736] border border-white/10'}`}
+                  >
+                    {isCheckingIn ? (
+                      <span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+                    ) : hasCheckedIn ? (
+                      <CheckCircle size={18} />
+                    ) : (
+                      <MapPin size={18} />
+                    )}
+                    {isCheckingIn ? 'กำลังตรวจสอบ...' : hasCheckedIn ? 'เช็คอินแล้ว' : 'เช็คอินสถานที่นี้'}
+                  </button>
                 </div>
               </div>
             )}
